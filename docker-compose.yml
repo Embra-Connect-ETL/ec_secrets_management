@@ -1,0 +1,20 @@
+version: "3.3"
+
+services:
+  mongo-db:
+    image: mongo:latest
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    networks:
+      - ec_network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ec_root # Do NOT use in production
+      MONGO_INITDB_ROOT_PASSWORD: ec_root # Do NOT use in production
+      MONGO_INITDB_DATABASE: embra_connect_dev # Do NOT use in production
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+
+networks:
+  ec_network:
+    driver: bridge

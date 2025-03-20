@@ -1,0 +1,55 @@
+#![allow(unused)]
+
+use rocket::serde::json::Json;
+
+#[macro_use]
+extern crate rocket;
+extern crate crypto;
+extern crate log;
+
+mod custom_catchers;
+mod db;
+mod fairings;
+mod models;
+mod repositories;
+mod routes;
+mod utils;
+
+use custom_catchers::*;
+use routes::vault::vault_routes;
+
+#[get("/health")]
+fn health_check() -> Json<String> {
+    Json(String::from("Secrets management service is running..."))
+}
+
+#[launch]
+fn rocket() -> _ {
+    dotenvy::dotenv().ok();
+    
+    rocket::build()
+        .attach(db::init())
+        .attach(fairings::CORS)
+        .mount("/", routes![health_check])
+        .mount("/", vault_routes())
+        .register(
+            "/",
+            catchers![
+                bad_request,
+                unauthorized,
+                forbidden,
+                not_found,
+                method_not_allowed,
+                request_timeout,
+                conflict,
+                payload_too_large,
+                unsupported_media_type,
+                teapot,
+                too_many_requests,
+                internal_error,
+                bad_gateway,
+                service_unavailable,
+                gateway_timeout
+            ],
+        )
+}
