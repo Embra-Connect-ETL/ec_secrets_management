@@ -54,17 +54,26 @@ pub async fn create_secret(
 pub async fn list_entries(
     repo: &State<Arc<VaultRepository>>,
 ) -> Result<Json<Vec<VaultDocument>>, Json<ErrorResponse>> {
-    let entries = match repo.list_secrets().await {
-        Ok(entries) => entries,
-        Err(_) => {
-            return Err(Json(ErrorResponse {
-                status: Status::InternalServerError.code,
-                message: "Failed to retrieve vault entries".to_string(),
+    match repo.list_secrets().await {
+        Ok(entries) if !entries.is_empty() => {
+            info!("Successfully retrieved {} vault entries.", entries.len());
+            Ok(Json(entries))
+        }
+        Ok(_) => {
+            warn!("No vault entries found.");
+            Err(Json(ErrorResponse {
+                status: Status::NotFound.code,
+                message: "No vault entries found.".to_string(),
             }))
         }
-    };
-
-    Ok(Json(entries))
+        Err(_) => {
+            error!("Failed to retrieve vault entries.");
+            Err(Json(ErrorResponse {
+                status: Status::InternalServerError.code,
+                message: "Failed to retrieve vault entries.".to_string(),
+            }))
+        }
+    }
 }
 
 /*-----------------------------
@@ -74,7 +83,7 @@ pub async fn list_entries(
 pub async fn get_entry(
     repo: &State<Arc<VaultRepository>>,
     id: &str,
-) -> Result<Json<VaultDocument>, Json<ErrorResponse>> {
+) -> Result<Json<String>, Json<ErrorResponse>> {
     if id.trim().is_empty() {
         error!("Invalid request: Provided ID is empty.");
         return Err(Json(ErrorResponse {
@@ -115,7 +124,7 @@ pub async fn get_entry(
 pub async fn get_entry_by_author(
     repo: &State<Arc<VaultRepository>>,
     created_by: &str,
-) -> Result<Json<VaultDocument>, Json<ErrorResponse>> {
+) -> Result<Json<Vec<VaultDocument>>, Json<ErrorResponse>> {
     if created_by.trim().is_empty() {
         error!("Invalid request: Provided author name is empty.");
         return Err(Json(ErrorResponse {
@@ -124,29 +133,30 @@ pub async fn get_entry_by_author(
         }));
     }
 
-    match repo.get_secret_by_author(&created_by).await {
-        Ok(Some(entry)) => {
+    match repo.get_secret_by_author(created_by).await {
+        Ok(secrets) if !secrets.is_empty() => {
             info!(
-                "Successfully retrieved vault entry for author: {}",
+                "Successfully retrieved {} vault entries for author: {}",
+                secrets.len(),
                 created_by
             );
-            Ok(Json(entry))
+            Ok(Json(secrets))
         }
-        Ok(None) => {
-            error!("No vault entry found for author: {}", created_by);
+        Ok(_) => {
+            error!("No vault entries found for author: {}", created_by);
             Err(Json(ErrorResponse {
                 status: Status::NotFound.code,
-                message: "Vault entry not found.".to_string(),
+                message: "No vault entries found.".to_string(),
             }))
         }
         Err(e) => {
             error!(
-                "Failed to retrieve vault entry for author: {}. Error: {:?}",
+                "Failed to retrieve vault entries for author: {}. Error: {:?}",
                 created_by, e
             );
             Err(Json(ErrorResponse {
                 status: Status::InternalServerError.code,
-                message: "Failed to retrieve vault entry.".to_string(),
+                message: "Failed to retrieve vault entries.".to_string(),
             }))
         }
     }

@@ -47,8 +47,11 @@ async fn connect() -> mongodb::error::Result<(Arc<UserRepository>, Arc<VaultRepo
 
     let user_repo = Arc::new(UserRepository::new(&client, &database_name, "users"));
 
-    let vault_repo = Arc::new(VaultRepository::new(&client, &database_name, "vault"));
+    let vault_repo = Arc::new(VaultRepository::new(
+        &client,
+        &database_name,
+        "vault"
+    ));
 
-    // Create and return an Arc wrapped UserRepository
     Ok((user_repo, vault_repo))
 }

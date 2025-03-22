@@ -1,6 +1,6 @@
-#--------------------------------
-# Service - generic_auth_module
-#-------------------------------
+#---------------------------------
+# Service - ec_secrets_management
+#---------------------------------
 
 [default]
 # Network settings

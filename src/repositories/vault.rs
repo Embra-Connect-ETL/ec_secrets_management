@@ -1,35 +1,43 @@
 #![allow(unused)]
-
-/*-----------------
- 3rd party modules
--------------------*/
-use chrono::{DateTime, Utc};
+use anyhow::anyhow;
+use base64::prelude::BASE64_STANDARD;
+use base64::{engine::general_purpose, Engine};
+use chrono::Utc;
 use futures::stream::TryStreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    error::{Error, Result},
-    options::ClientOptions,
+    error::Result,
     Client, Collection,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-/*--------------
- Custom modules
-----------------*/
 use crate::models::VaultDocument;
-use crate::utils::vault::SecretVault;
+use crate::utils::vault::{decrypt, encrypt};
 
 #[derive(Debug)]
 pub struct VaultRepository {
     collection: Collection<VaultDocument>,
+    encryption_key: String,
 }
 
 impl VaultRepository {
+    /// Create a new repository with a MongoDB collection and a shared SecretVault instance
     pub fn new(client: &Client, db_name: &str, collection_name: &str) -> Self {
         let collection = client
             .database(db_name)
             .collection::<VaultDocument>(collection_name);
-        Self { collection }
+
+        let encryption_key = format!(
+            "{}",
+            std::env::var("ECS_ENCRYPTION_KEY").expect("ECS_ENCRYPTION_KEY must be set")
+        );
+
+        Self {
+            collection,
+            encryption_key,
+        }
     }
 
     /*-----------------
@@ -41,65 +49,86 @@ impl VaultRepository {
         value: &str,
         created_by: &str,
     ) -> Result<VaultDocument> {
-        let encryption_key = std::env::var_os("ECS_ENCRYPTION_KEY")
-            .expect("[ECS_ENCRYPTION_KEY] must be set...")
-            .into_string()
-            .unwrap();
-
-        let encrypted_value =
-            SecretVault::add_secret(encryption_key, key.to_string(), value.to_string());
+        let encrypted_value = encrypt(value.as_bytes(), self.encryption_key.as_bytes()).unwrap();
 
         let secret = VaultDocument {
             id: ObjectId::new(),
             key: key.to_string(),
-            value: encrypted_value,
+            value: general_purpose::STANDARD.encode(encrypted_value), // Use base64 for safe string storage
             created_by: created_by.to_string(),
             created_at: Utc::now(),
         };
 
         self.collection.insert_one(&secret).await?;
-
         Ok(secret)
     }
 
     /*---------------
     GET secret by id
     ---------------*/
-    pub async fn get_secret_by_id(&self, id: &str) -> Result<Option<VaultDocument>> {
+    pub async fn get_secret_by_id(&self, id: &str) -> Result<Option<String>> {
         let object_id = ObjectId::parse_str(id).unwrap();
         let filter = doc! { "_id": object_id };
-        let secret = self.collection.find_one(filter).await?;
-        Ok(secret)
+
+        if let Some(secret) = self.collection.find_one(filter).await? {
+            let encoded_value = BASE64_STANDARD.decode(&secret.value).unwrap();
+            let decrypted_value = decrypt(&encoded_value, &self.encryption_key.as_bytes()).unwrap();
+            return Ok(Some(String::from_utf8_lossy(&decrypted_value).to_string()));
+        }
+        Ok(None)
     }
 
     /*-----------------
     GET secret by author
     -------------------*/
-    pub async fn get_secret_by_author(&self, created_by: &str) -> Result<Option<VaultDocument>> {
+    pub async fn get_secret_by_author(&self, created_by: &str) -> Result<Vec<VaultDocument>> {
         let filter = doc! { "created_by": created_by };
-        let user = self.collection.find_one(filter).await?;
-        Ok(user)
+        let mut cursor = self.collection.find(filter).await?;
+        let mut secrets = Vec::new();
+
+        while let Some(mut secret) = cursor.try_next().await? {
+            if let Ok(encoded_value) = BASE64_STANDARD.decode(&secret.value) {
+                if let Ok(decrypted_value) = decrypt(&encoded_value, self.encryption_key.as_bytes())
+                {
+                    secret.value = String::from_utf8_lossy(&decrypted_value).to_string();
+                }
+            }
+            secrets.push(secret);
+        }
+
+        Ok(secrets)
     }
 
     /*-------------
     DELETE a secret
     ---------------*/
-    pub async fn delete_secret(&self, id: &str) -> Result<Option<VaultDocument>> {
+    pub async fn delete_secret(&self, id: &str) -> Result<Option<String>> {
         let object_id = ObjectId::parse_str(id).unwrap();
         let filter = doc! { "_id": object_id };
-        let secret = self.collection.find_one_and_delete(filter).await?;
-        Ok(secret)
+
+        if let Some(secret) = self.collection.find_one_and_delete(filter).await? {
+            let encoded_value = BASE64_STANDARD.decode(&secret.value).unwrap();
+            let decrypted_value = decrypt(&encoded_value, &self.encryption_key.as_bytes()).unwrap();
+            return Ok(Some(String::from_utf8_lossy(&decrypted_value).to_string()));
+        }
+
+        Ok(None)
     }
 
     /*-------------
-    GET all users
+    LIST all secrets
     ---------------*/
     pub async fn list_secrets(&self) -> Result<Vec<VaultDocument>> {
-        let filter = doc! {};
-        let mut cursor = self.collection.find(filter).await?;
+        let mut cursor = self.collection.find(doc! {}).await?;
         let mut secrets = Vec::new();
 
-        while let Some(secret) = cursor.try_next().await? {
+        while let Some(mut secret) = cursor.try_next().await? {
+            if let Ok(encoded_value) = BASE64_STANDARD.decode(&secret.value) {
+                if let Ok(decrypted_value) = decrypt(&encoded_value, self.encryption_key.as_bytes())
+                {
+                    secret.value = String::from_utf8_lossy(&decrypted_value).to_string();
+                }
+            }
             secrets.push(secret);
         }
 
