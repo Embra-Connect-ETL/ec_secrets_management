@@ -44,28 +44,30 @@
                 </button>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" @change="toggleAll" v-model="allSelected"></th>
-                        <th>Name (Key)</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="secret in filteredSecrets" :key="secret.id">
-                        <td><input type="checkbox" v-model="selectedSecrets" :value="secret.id"></td>
-                        <td>{{ secret.name }}</td>
-                        <td :class="['status', secret.status.toLowerCase()]">
-                            <span>
-                                {{ secret.status }}
-                            </span>
-                        </td>
-                        <td>{{ secret.created }}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" @change="toggleAll" v-model="allSelected"></th>
+                            <th>Name (Key)</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="secret in filteredSecrets" :key="secret.id">
+                            <td><input type="checkbox" v-model="selectedSecrets" :value="secret.id"></td>
+                            <td>{{ secret.key }}</td>
+                            <td :class="['status', (secret.status || 'Active').toLowerCase()]">
+                                <span>
+                                    {{ secret.status || 'Active' }}
+                                </span>
+                            </td>
+                            <td>{{ secret.created }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
             <!-- Secret Creation Modal -->
             <div class="modal" v-if="showModal">
@@ -86,6 +88,7 @@
     </div>
 
     <script>
+        const API_BASE_URL = "http://localhost:8089";
         const { createApp } = Vue;
 
         createApp({
@@ -93,34 +96,49 @@
                 return {
                     showModal: false,
                     searchQuery: "",
-                    secrets: [
-                        { id: 1, name: "DatabasePassword", status: "Active", created: "2025-03-22" },
-                        { id: 2, name: "InternalAPIKey", status: "Expired", created: "2024-12-15" },
-                        { id: 3, name: "ServiceAccountToken", status: "Active", created: "2025-01-10" }
-                    ],
+                    secrets: [],
                     selectedSecrets: [],
                     allSelected: false,
                     newSecret: {
                         name: "",
                         value: "",
-                        created_by: ""
+                        created_by: "",
                     }
                 };
             },
             computed: {
                 filteredSecrets() {
                     return this.secrets.filter(secret =>
-                        secret.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                        secret.key.toLowerCase().includes(this.searchQuery.toLowerCase())
                     );
                 }
             },
             methods: {
-                toggleAll() {
-                    if (this.allSelected) {
-                        this.selectedSecrets = this.filteredSecrets.map(secret => secret.id);
-                    } else {
-                        this.selectedSecrets = [];
+                async fetchSecrets() {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/retrieve/vault/entries`);
+                        const data = await response.json();
+
+                        if (!Array.isArray(data)) throw new Error("Invalid API response format");
+
+                        this.secrets = data.map(secret => ({
+                            id: secret._id?.$oid || "Unknown",
+                            key: secret.key || "Unnamed",
+                            value: secret.value || "No Value",
+                            created_by: secret.created_by || "Unknown",
+                            created: secret.createdAt?.$date?.$numberLong
+                                ? new Date(parseInt(secret.createdAt.$date.$numberLong)).toLocaleString()
+                                : "Unknown Date",
+                            status: "Active"  // 🔹 Defaulting status to "Active" - To do: Add status support
+                        }));
+
+                    } catch (error) {
+                        console.error(error);
+                        alert(error.message);
                     }
+                },
+                toggleAll() {
+                    this.selectedSecrets = this.allSelected ? this.filteredSecrets.map(secret => secret.id) : [];
                 },
                 async createSecret() {
                     if (!this.newSecret.name.trim()) {
@@ -129,13 +147,13 @@
                     }
 
                     const payload = {
-                        key: this.newSecret.name, // Using 'name' as key
+                        key: this.newSecret.name,
                         value: this.newSecret.value,
                         created_by: this.newSecret.created_by
                     };
 
                     try {
-                        const response = await fetch("/create/vault/entry", {
+                        const response = await fetch(`${API_BASE_URL}/create/vault/entry`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify(payload)
@@ -143,33 +161,31 @@
 
                         if (!response.ok) throw new Error("Failed to create secret");
 
-                        this.secrets.push({
-                            id: this.secrets.length + 1,
-                            name: this.newSecret.name,
-                            status: "Active",
-                            created: this.newSecret.created
-                        });
-
-                        // Reset form and close modal
-                        this.newSecret = {
-                            name: "",
-                            value: "",
-                            created_by: "",
-                            created: new Date().toISOString().split("T")[0]
-                        };
+                        this.fetchSecrets();
                         this.showModal = false;
 
                     } catch (error) {
                         alert(error.message);
                     }
                 },
-                deleteSelected() {
-                    this.secrets = this.secrets.filter(secret => !this.selectedSecrets.includes(secret.id));
-                    this.selectedSecrets = [];
+                async deleteSelected() {
+                    for (const id of this.selectedSecrets) {
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/delete/${id}`, { method: "DELETE" });
+                            if (!response.ok) throw new Error("Failed to delete secret");
+                        } catch (error) {
+                            alert(error.message);
+                        }
+                    }
+                    this.fetchSecrets();
                 }
+            },
+            mounted() {
+                this.fetchSecrets();
             }
         }).mount("#app");
     </script>
+
 </body>
 
 </html>
