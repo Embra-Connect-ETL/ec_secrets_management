@@ -55,16 +55,9 @@ pub async fn list_entries(
     repo: &State<Arc<VaultRepository>>,
 ) -> Result<Json<Vec<VaultDocument>>, Json<ErrorResponse>> {
     match repo.list_secrets().await {
-        Ok(entries) if !entries.is_empty() => {
+        Ok(entries) => {
             info!("Successfully retrieved {} vault entries.", entries.len());
-            Ok(Json(entries))
-        }
-        Ok(_) => {
-            warn!("No vault entries found.");
-            Err(Json(ErrorResponse {
-                status: Status::NotFound.code,
-                message: "No vault entries found.".to_string(),
-            }))
+            Ok(Json(entries)) // Always return an array, even if empty
         }
         Err(_) => {
             error!("Failed to retrieve vault entries.");
