@@ -1,6 +1,8 @@
 #![allow(unused)]
 
-use rocket::serde::json::Json;
+use std::path::PathBuf;
+
+use rocket::{fs::FileServer, serde::json::Json};
 
 #[macro_use]
 extern crate rocket;
@@ -26,12 +28,16 @@ fn health_check() -> Json<String> {
 #[launch]
 fn rocket() -> _ {
     dotenvy::dotenv().ok();
+
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    let public_path: PathBuf = current_dir.join("./public");
     
     rocket::build()
         .attach(db::init())
         .attach(fairings::CORS)
         .mount("/", routes![health_check])
         .mount("/", vault_routes())
+        .mount("/", FileServer::from(public_path))
         .register(
             "/",
             catchers![
