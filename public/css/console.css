@@ -19,6 +19,31 @@
     justify-content: center;
 }
 
+.logout {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    padding: 2rem;
+}
+
+.logout-btn {
+    border: none;
+    background: none;
+    opacity: .8;
+    cursor: pointer;
+    transition: .1s all ease;
+}
+
+.logout-btn:hover {
+    opacity: 1;
+}
+
+.logout-btn ion-icon {
+    font-size: 3rem;
+    color: var(--dark-gray);
+}
+
 header {
     display: flex;
     justify-content: space-between;
@@ -163,6 +188,7 @@ td {
 
 .modal {
     position: fixed;
+    z-index: 999999;
     top: 0;
     left: 0;
     width: 100%;

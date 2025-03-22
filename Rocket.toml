@@ -13,7 +13,7 @@ temp_dir = "/tmp"                 # Directory for temporary files
 ident = "Rocket"                  # Server identifier in responses
 
 # Logging and debugging
-log_level = "debug"            # Logging level: "critical", "normal", "debug"
+log_level = "normal"            # Logging level: "critical", "normal", "debug"
 cli_colors = true                 # Enable CLI colors for local logs
 
 # Security

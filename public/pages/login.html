@@ -90,13 +90,12 @@
 
                         const data = await response.json();
 
-                        if (!response.ok) {
+                        if (data.status !== 200) {
                             this.showToast(data.message || "Invalid credentials", "error");
                             return;
                         }
 
-                        // Store token in sessionStorage
-                        sessionStorage.setItem("authToken", data.token);
+                        localStorage.setItem("authToken", data.token);
                         this.showToast("Login successful! Redirecting...", "success");
 
                         // Redirect to Secrets Management Console

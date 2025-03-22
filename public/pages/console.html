@@ -29,6 +29,12 @@
 </head>
 
 <body>
+    <div class="logout">
+        <button class="logout-btn" title="Logout...">
+            <ion-icon name="log-out"></ion-icon>
+        </button>
+    </div>
+
     <div class="content-wrapper">
         <div id="app" class="container">
             <header>
@@ -119,6 +125,14 @@
             }
         });
 
+        document.querySelector(".logout-btn").addEventListener("click", () => {
+            localStorage.clear();
+
+            setTimeout(() => {
+                window.location.href = "./login.html";
+            }, 500);
+        })
+
         const API_BASE_URL = "http://localhost:8089";
         const { createApp } = Vue;
 
@@ -153,13 +167,13 @@
                         if (!Array.isArray(data)) throw new Error("Invalid API response format");
 
                         this.secrets = data.map(secret => ({
-                            id: secret._id?.$oid || "Unknown",
+                            id: secret._id?.$oid || "n/a",
                             key: secret.key || "Unnamed",
                             value: secret.value || "No Value",
-                            created_by: secret.created_by || "Unknown",
+                            created_by: secret.created_by || "n/a",
                             created: secret.createdAt?.$date?.$numberLong
                                 ? new Date(parseInt(secret.createdAt.$date.$numberLong)).toLocaleString()
-                                : "Unknown Date",
+                                : "Invalid Date",
                             status: "Active"  // 🔹 Defaulting status to "Active" - To do: Add status support
                         }));
 
