@@ -1,6 +1,6 @@
 # Locksmith - Embra Connect's Secrets Management Platform
 
-![Locksmith by Embra Connect](https://www.embraconnect.com/assets/png/color_logo_no_bg.png)
+![Locksmith by Embra Connect](https://github.com/Embra-Connect-ETL/ec_secrets_management/blob/master/previews/ecs_console.png?raw=true)
 
 ## Overview
 
