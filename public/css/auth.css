@@ -101,12 +101,13 @@ input:focus {
     font-weight: 700;
     font-size: 1.4rem;
     margin-top: 2rem;
+    box-shadow: var(--level-1);
     cursor: pointer;
     transition: .2s all ease;
 }
 
 .form-btn:hover {
-    box-shadow: var(--level-1);
+    box-shadow: var(--level-2);
 }
 
 .navigate-to-registration-section,

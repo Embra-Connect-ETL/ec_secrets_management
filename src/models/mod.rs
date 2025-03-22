@@ -29,6 +29,12 @@ pub struct User {
     pub created_at: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+pub struct UserCredentials {
+    pub email: String,
+    pub password: String,
+}
+
 /*------------
  Vault models
 -------------*/
@@ -81,6 +87,29 @@ pub struct DeleteSecretResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorResponse {
+    pub status: u16,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize, Responder, Serialize)]
+pub struct AuthModuleResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SetupResponse {
+    pub status: u16,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LoginResponse {
+    pub status: u16,
+    pub token: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DeleteUserResponse {
     pub status: u16,
     pub message: String,
 }
