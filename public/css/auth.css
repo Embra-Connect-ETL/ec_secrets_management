@@ -1,5 +1,10 @@
 @import url("./variables.css");
 
+[v-cloak] {
+    display: none;
+}
+
+
 header {
     position: absolute;
     width: 100%;
@@ -35,6 +40,7 @@ header .logo-wrapper .logo {
 }
 
 .form-container {
+    width: 768px;
     border: 3px solid #efefef80;
     background: var(--white);
     padding: 4rem;
@@ -67,9 +73,11 @@ header .logo-wrapper .logo {
 }
 
 input {
-    width: 376px;
+    width: 100%;
+    max-width: 376px;
+    margin-bottom: 1.2rem;
     border: none;
-    padding: .8rem;
+    padding: .8rem !important;
     background: none;
     border-bottom: 1px solid #a8a8a8ee;
     height: unset;
@@ -89,8 +97,9 @@ input:focus {
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    margin-bottom: 2rem;
 }
+
+/* #F4F3F3 */
 
 .form-btn {
     border: none;
@@ -100,7 +109,9 @@ input:focus {
     color: var(--white);
     font-weight: 700;
     font-size: 1.4rem;
-    margin-top: 2rem;
+    margin-top: 2rem !important;
+    margin-bottom: 2rem !important;
+    width: 100%;
     box-shadow: var(--level-1);
     cursor: pointer;
     transition: .2s all ease;

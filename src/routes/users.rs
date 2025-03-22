@@ -192,7 +192,7 @@ pub async fn update_user(
     Ok(Json(user))
 }
 
-#[delete("/delete/<id>")]
+#[delete("/delete/user/<id>")]
 pub async fn delete_user(
     repo: &State<Arc<UserRepository>>,
     id: String,

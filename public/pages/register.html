@@ -21,9 +21,9 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
-    <link rel="stylesheet" href="../css/auth.css">
-    <script src="../../static/js/common/constants.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
+    <link rel="stylesheet" href="../css/auth.css">
     <title>Locksmith | Set Up Account</title>
 </head>
 
@@ -40,24 +40,131 @@
                 Set Up an Account
                 <ion-icon name="build" class="form-title-icon"></ion-icon>
             </h1>
-            <form id="registration-form" class="registration-form">
-                <div class="input-wrapper">
-                    <input type="email" id="email" placeholder="user@organization.com" autocomplete="email" required>
-                </div>
 
-                <div class="input-wrapper">
-                    <input type="password" id="password" placeholder="Create a password" autocomplete="current-password"
-                        required>
-                </div>
+            <div id="app" v-cloak>
+                <form @submit.prevent="registerUser">
+                    <div class="input-wrapper">
+                        <input type="email" v-model="formData.email" placeholder="user@organization.com" required>
+                    </div>
 
-                <button id="registeration-btn" class="registeration-btn form-btn">Register</button>
-            </form>
-            <p class="navigate-to-login-section">Already have an account? <a href="./login.html">Login here</a>
+                    <div class="input-wrapper">
+                        <input type="password" v-model="formData.password" placeholder="Create a password" required>
+                    </div>
+
+                    <button type="submit" class="registeration-btn form-btn">Register</button>
+                </form>
+            </div>
+
+            <p class="navigate-to-login-section">
+                Already have an account? <a href="./login.html">Login here</a>
             </p>
         </div>
     </div>
 
-    <script src="../../static/js/auth/register.js"></script>
+    <script>
+        const { createApp, reactive } = Vue;
+
+        createApp({
+            setup() {
+                const formData = reactive({
+                    email: '',
+                    password: ''
+                });
+
+                const registerUser = async () => {
+                    if (!formData.email || !formData.password) {
+                        Toastify({
+                            text: "Email and password are required!",
+                            duration: 3000,
+                            gravity: "top",
+                            position: "right",
+                            style: {
+                                background: "#FE9453",
+                                color: "#ffffff",
+                                borderRadius: "24px 24px 24px 24px",
+                                fontWeight: "600",
+                                fontSize: "9px",
+                                letterSpacing: "1.4px",
+                                textTransform: "capitalize",
+                                boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                            }
+                        }).showToast();
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch("http://localhost:8089/setup", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: formData.email, password: formData.password })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            Toastify({
+                                text: "Registration successful!",
+                                duration: 3000,
+                                gravity: "top",
+                                position: "right",
+                                style: {
+                                    background: "#FE9453",
+                                    color: "#ffffff",
+                                    borderRadius: "24px 24px 24px 24px",
+                                    fontWeight: "600",
+                                    fontSize: "9px",
+                                    letterSpacing: "1.4px",
+                                    textTransform: "capitalize",
+                                    boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                                }
+                            }).showToast();
+
+                            setTimeout(() => {
+                                window.location.href = "./login.html";
+                            }, 2000);
+                        } else {
+                            Toastify({
+                                text: data.message || "Registration failed!",
+                                duration: 3000,
+                                gravity: "top",
+                                position: "right",
+                                style: {
+                                    background: "#FE9453",
+                                    color: "#ffffff",
+                                    borderRadius: "24px 24px 24px 24px",
+                                    fontWeight: "600",
+                                    fontSize: "9px",
+                                    letterSpacing: "1.4px",
+                                    textTransform: "capitalize",
+                                    boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                                }
+                            }).showToast();
+                        }
+                    } catch (error) {
+                        console.error("Error:", error);
+                        Toastify({
+                            text: "Something went wrong, please try again",
+                            duration: 3000,
+                            gravity: "top",
+                            position: "right",
+                            style: {
+                                background: "#FE9453",
+                                color: "#ffffff",
+                                borderRadius: "24px 24px 24px 24px",
+                                fontWeight: "600",
+                                fontSize: "9px",
+                                letterSpacing: "1.4px",
+                                textTransform: "capitalize",
+                                boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                            }
+                        }).showToast();
+                    }
+                };
+
+                return { formData, registerUser };
+            }
+        }).mount("#app");
+    </script>
 </body>
 
 </html>

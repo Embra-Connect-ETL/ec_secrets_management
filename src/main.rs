@@ -18,6 +18,7 @@ mod routes;
 mod utils;
 
 use custom_catchers::*;
+use routes::users::user_routes;
 use routes::vault::vault_routes;
 
 #[get("/health")]
@@ -31,11 +32,12 @@ fn rocket() -> _ {
 
     let current_dir = std::env::current_dir().expect("Failed to get current directory");
     let public_path: PathBuf = current_dir.join("./public");
-    
+
     rocket::build()
         .attach(db::init())
         .attach(fairings::CORS)
         .mount("/", routes![health_check])
+        .mount("/", user_routes())
         .mount("/", vault_routes())
         .mount("/", FileServer::from(public_path))
         .register(

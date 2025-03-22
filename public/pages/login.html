@@ -15,14 +15,16 @@
 
     <!-- Icons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons.js"></script>
+
+    <!-- Vue -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <!-- Toaster -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
     <link rel="stylesheet" href="../css/auth.css">
-
     <title>Locksmith | Log In</title>
 </head>
 
@@ -33,31 +35,104 @@
         </div>
     </header>
 
-    <div class="main-wrapper">
+    <div class="main-wrapper" id="app">
         <div class="form-container">
             <h1>
                 Welcome back!
                 <ion-icon name="hammer" class="form-title-icon"></ion-icon>
             </h1>
-            <form id="login-form" class="login-form">
+
+            <form @submit.prevent="handleLogin">
                 <div class="input-wrapper">
-                    <input type="email" id="email" placeholder="user@organization.com" autocomplete="email" required>
+                    <input type="email" v-model="email" placeholder="user@organization.com" required>
                 </div>
 
                 <div class="input-wrapper">
-                    <input type="password" id="password" placeholder="Password" autocomplete="current-password"
-                        required>
+                    <input type="password" v-model="password" placeholder="Password" required>
                 </div>
 
-                <button id="login-btn" class="login-btn form-btn" type="submit">Log In</button>
+                <button class="form-btn" type="submit" :disabled="loading">
+                    {{ loading ? "Logging in..." : "Log In" }}
+                </button>
             </form>
-            <p class="navigate-to-registration-section">Don't have an account? <a href="./register.html">Set up one
-                    here</a>
+
+            <p class="navigate-to-registration-section">
+                Don't have an account? <a href="./register.html">Set up one here</a>
             </p>
         </div>
     </div>
 
-    <script src="../../static/js/auth/login.js"></script>
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    email: "",
+                    password: "",
+                    loading: false
+                };
+            },
+            methods: {
+                async handleLogin() {
+                    if (!this.email || !this.password) {
+                        this.showToast("Please enter email and password", "error");
+                        return;
+                    }
+
+                    this.loading = true;
+                    try {
+                        const response = await fetch("http://localhost:8089/login", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: this.email, password: this.password }),
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            this.showToast(data.message || "Invalid credentials", "error");
+                            return;
+                        }
+
+                        // Store token in sessionStorage
+                        sessionStorage.setItem("authToken", data.token);
+                        this.showToast("Login successful! Redirecting...", "success");
+
+                        // Redirect to Secrets Management Console
+                        setTimeout(() => {
+                            window.location.href = "./console.html";
+                        }, 1500);
+
+                    } catch (error) {
+                        this.showToast("Error connecting to server", "error");
+                        console.error("Login error:", error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                showToast(message, type) {
+                    Toastify({
+                        text: message,
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        style: {
+                            background: type === "success" ? "#FE9453" : "red",
+                            color: "#ffffff",
+                            borderRadius: "24px 24px 24px 24px",
+                            fontWeight: "600",
+                            fontSize: "9px",
+                            letterSpacing: "1.4px",
+                            textTransform: "capitalize",
+                            boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                        }
+                    }).showToast();
+                }
+            }
+        }).mount("#app");
+    </script>
 </body>
 
 </html>
