@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="300" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Locksmith | Secrets Management Platform" />
+    <meta property="og:description" content="Embra Connect's Secrets Management Platform" />
+    <meta property="og:url" content="https://www.embraconnect.com" />
+    <meta property="og:image" content="https://www.embraconnect.com/assets/png/color_logo_no_bg.png" />
+    <link rel="shortcut icon" href="../assets/icons/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="../css/console.css">
+
+    <!-- Vue.js CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+    <!-- Icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <title>Locksmith - Console</title>
+</head>
+
+<body>
+    <div class="content-wrapper">
+        <div id="app" class="container">
+            <header>
+                <h2>
+                    <ion-icon name="document-lock" class="header-icon"></ion-icon>
+                    Manage Secrets
+                </h2>
+                <input type="text" class="search-bar" v-model="searchQuery" placeholder="Search secrets...">
+            </header>
+
+            <div class="controls">
+                <button class="btn add" @click="showModal = true">
+                    <ion-icon name="add-circle" class="btn-icon"></ion-icon> Add Secret
+                </button>
+                <button class="btn delete" @click="deleteSelected" :disabled="!selectedSecrets.length">
+                    <ion-icon name="trash" class="btn-icon"></ion-icon> Delete Selected
+                </button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" @change="toggleAll" v-model="allSelected"></th>
+                        <th>Name (Key)</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="secret in filteredSecrets" :key="secret.id">
+                        <td><input type="checkbox" v-model="selectedSecrets" :value="secret.id"></td>
+                        <td>{{ secret.name }}</td>
+                        <td :class="['status', secret.status.toLowerCase()]">
+                            <span>
+                                {{ secret.status }}
+                            </span>
+                        </td>
+                        <td>{{ secret.created }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Secret Creation Modal -->
+            <div class="modal" v-if="showModal">
+                <div class="modal-content">
+                    <h3>Add New Secret</h3>
+
+                    <input type="text" v-model="newSecret.name" placeholder="Secret Name (Key)">
+                    <input type="text" v-model="newSecret.value" placeholder="Secret Value">
+                    <input type="text" v-model="newSecret.created_by" placeholder="user@example.com" disabled>
+
+                    <div class="modal-actions">
+                        <button class="btn add" @click="createSecret">Save</button>
+                        <button class="btn delete" @click="showModal = false">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    showModal: false,
+                    searchQuery: "",
+                    secrets: [
+                        { id: 1, name: "DatabasePassword", status: "Active", created: "2025-03-22" },
+                        { id: 2, name: "InternalAPIKey", status: "Expired", created: "2024-12-15" },
+                        { id: 3, name: "ServiceAccountToken", status: "Active", created: "2025-01-10" }
+                    ],
+                    selectedSecrets: [],
+                    allSelected: false,
+                    newSecret: {
+                        name: "",
+                        value: "",
+                        created_by: ""
+                    }
+                };
+            },
+            computed: {
+                filteredSecrets() {
+                    return this.secrets.filter(secret =>
+                        secret.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                    );
+                }
+            },
+            methods: {
+                toggleAll() {
+                    if (this.allSelected) {
+                        this.selectedSecrets = this.filteredSecrets.map(secret => secret.id);
+                    } else {
+                        this.selectedSecrets = [];
+                    }
+                },
+                async createSecret() {
+                    if (!this.newSecret.name.trim()) {
+                        alert("Secret name (key) is required.");
+                        return;
+                    }
+
+                    const payload = {
+                        key: this.newSecret.name, // Using 'name' as key
+                        value: this.newSecret.value,
+                        created_by: this.newSecret.created_by
+                    };
+
+                    try {
+                        const response = await fetch("/create/vault/entry", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error("Failed to create secret");
+
+                        this.secrets.push({
+                            id: this.secrets.length + 1,
+                            name: this.newSecret.name,
+                            status: "Active",
+                            created: this.newSecret.created
+                        });
+
+                        // Reset form and close modal
+                        this.newSecret = {
+                            name: "",
+                            value: "",
+                            created_by: "",
+                            created: new Date().toISOString().split("T")[0]
+                        };
+                        this.showModal = false;
+
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                },
+                deleteSelected() {
+                    this.secrets = this.secrets.filter(secret => !this.selectedSecrets.includes(secret.id));
+                    this.selectedSecrets = [];
+                }
+            }
+        }).mount("#app");
+    </script>
+</body>
+
+</html>
