@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:image:width" content="400" />
+    <meta property="og:image:height" content="300" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Locksmith | Secrets Management Platform" />
+    <meta property="og:description" content="Embra Connect's Secrets Management Platform" />
+    <meta property="og:url" content="https://www.embraconnect.com" />
+    <meta property="og:image" content="https://www.embraconnect.com/assets/png/color_logo_no_bg.png" />
+    <link rel="shortcut icon" href="../assets/icons/favicon.ico" type="image/x-icon">
+
+    <!-- Icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Toaster -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <link rel="stylesheet" href="../css/auth.css">
+    <script src="../../static/js/common/constants.js"></script>
+
+    <title>Locksmith | Set Up Account</title>
+</head>
+
+<body>
+    <header>
+        <div class="logo-wrapper">
+            <img class="logo" src="../assets/images/logos/ec_connect_logo.png" alt="logo">
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+        <div class="form-container">
+            <h1>
+                Set Up an Account
+                <ion-icon name="build" class="form-title-icon"></ion-icon>
+            </h1>
+            <form id="registration-form" class="registration-form">
+                <div class="input-wrapper">
+                    <input type="email" id="email" placeholder="user@organization.com" autocomplete="email" required>
+                </div>
+
+                <div class="input-wrapper">
+                    <input type="password" id="password" placeholder="Create a password" autocomplete="current-password"
+                        required>
+                </div>
+
+                <button id="registeration-btn" class="registeration-btn form-btn">Register</button>
+            </form>
+            <p class="navigate-to-login-section">Already have an account? <a href="./login.html">Login here</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="../../static/js/auth/register.js"></script>
+</body>
+
+</html>
