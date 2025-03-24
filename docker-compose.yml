@@ -7,7 +7,7 @@ services:
     depends_on:
       - ec_secrets_management_storage
     links:
-      - "ec_secrets_management_storage:ec_secrets_management"
+      - "ec_secrets_management_storage"
     ports:
       - "8089:8089"
     networks:
@@ -31,6 +31,7 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     volumes:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - ./data:/data/db
 
 networks:
   ec_network:

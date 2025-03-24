@@ -77,7 +77,7 @@
             methods: {
                 async handleLogin() {
                     if (!this.email || !this.password) {
-                        this.showToast("Please enter email and password", "error");
+                        this.displayToaster("Please enter email and password", "red");
                         return;
                     }
 
@@ -92,47 +92,48 @@
                         const data = await response.json();
 
                         if (data.status !== 200) {
-                            this.showToast(data.message || "Invalid credentials", "error");
+                            this.displayToaster(data.message || "Invalid credentials", "red");
                             return;
                         }
 
                         localStorage.setItem("authToken", data.token);
-                        this.showToast("Login successful! Redirecting...", "success");
+                        localStorage.setItem("ecId", this.email);
+                        this.displayToaster("Login successful, redirecting...");
 
-                        // Redirect to Secrets Management Console
                         setTimeout(() => {
                             window.location.href = "./console.html";
                         }, 1500);
 
                     } catch (error) {
-                        this.showToast("Error connecting to server", "error");
+                        this.displayToaster("Something went wrong, please try again", "red");
                         console.error("Login error:", error);
                     } finally {
                         this.loading = false;
                     }
                 },
-                showToast(message, type) {
+                displayToaster(message, backgroundColor = "#ffa07a") {
                     Toastify({
                         text: message,
                         duration: 3000,
-                        close: true,
+                        close: false,
                         gravity: "top",
                         position: "right",
                         style: {
-                            background: type === "success" ? "#FE9453" : "red",
+                            background: backgroundColor,
                             color: "#ffffff",
-                            borderRadius: "24px 24px 24px 24px",
+                            borderRadius: "24px",
                             fontWeight: "600",
-                            fontSize: "9px",
+                            fontSize: "14px",
                             letterSpacing: "1.4px",
                             textTransform: "capitalize",
-                            boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                            boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)"
                         }
                     }).showToast();
                 }
             }
         }).mount("#app");
     </script>
+
 </body>
 
 </html>

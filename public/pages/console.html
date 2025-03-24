@@ -86,7 +86,7 @@
 
                     <input type="text" v-model="newSecret.name" placeholder="Secret Name (Key)">
                     <input type="text" v-model="newSecret.value" placeholder="Secret Value">
-                    <input type="text" v-model="newSecret.created_by" placeholder="user@example.com" disabled>
+                    <input type="text" v-model="newSecret.created_by" placeholder="Secret Author" disabled>
 
                     <div class="modal-actions">
                         <button class="btn add" @click="createSecret">Save</button>
@@ -108,11 +108,11 @@
                     gravity: "top",
                     position: "right",
                     style: {
-                        background: "#FE9453",
+                        background: "#ffa07a",
                         color: "#ffffff",
                         borderRadius: "24px 24px 24px 24px",
                         fontWeight: "600",
-                        fontSize: "9px",
+                        fontSize: "14px",
                         letterSpacing: "1.4px",
                         textTransform: "capitalize",
                         boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
@@ -121,12 +121,29 @@
 
                 setTimeout(() => {
                     window.location.href = "./login.html";
-                }, 1500);
+                });
             }
         });
 
         document.querySelector(".logout-btn").addEventListener("click", () => {
             localStorage.clear();
+
+            Toastify({
+                text: "Logging out...",
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                style: {
+                    background: "#ffa07a",
+                    color: "#ffffff",
+                    borderRadius: "24px 24px 24px 24px",
+                    fontWeight: "600",
+                    fontSize: "14px",
+                    letterSpacing: "1.4px",
+                    textTransform: "capitalize",
+                    boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                }
+            }).showToast();
 
             setTimeout(() => {
                 window.location.href = "./login.html";
@@ -147,7 +164,7 @@
                     newSecret: {
                         name: "",
                         value: "",
-                        created_by: "",
+                        created_by: localStorage.getItem("ecId") || "Unknown User",
                     }
                 };
             },
@@ -159,6 +176,32 @@
                 }
             },
             methods: {
+                displayToaster(message, type = "info") {
+                    const backgroundColor = {
+                        success: "#ffa07a",
+                        error: "#FF5733",
+                        warning: "#ffa07a",
+                        info: "#ffa07a"
+                    }[type] || "#ffa07a"; // Default to amber
+
+                    Toastify({
+                        text: message,
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        style: {
+                            background: backgroundColor,
+                            color: "#ffffff",
+                            borderRadius: "24px",
+                            fontWeight: "600",
+                            fontSize: "14px",
+                            letterSpacing: "1px",
+                            textTransform: "capitalize",
+                            boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)",
+                        }
+                    }).showToast();
+                },
+
                 async fetchSecrets() {
                     try {
                         const response = await fetch(`${API_BASE_URL}/retrieve/vault/entries`);
@@ -168,33 +211,35 @@
 
                         this.secrets = data.map(secret => ({
                             id: secret._id?.$oid || "n/a",
-                            key: secret.key || "Unnamed",
+                            key: secret.key || "No name",
                             value: secret.value || "No Value",
                             created_by: secret.created_by || "n/a",
                             created: secret.createdAt?.$date?.$numberLong
                                 ? new Date(parseInt(secret.createdAt.$date.$numberLong)).toLocaleString()
                                 : "Invalid Date",
-                            status: "Active"  // 🔹 Defaulting status to "Active" - To do: Add status support
+                            status: "Active"
                         }));
-
                     } catch (error) {
-                        console.error(error);
-                        alert(error.message);
+                        this.displayToaster(error.message, "error");
                     }
                 },
+
                 toggleAll() {
                     this.selectedSecrets = this.allSelected ? this.filteredSecrets.map(secret => secret.id) : [];
                 },
+
                 async createSecret() {
                     if (!this.newSecret.name.trim()) {
-                        alert("Secret name (key) is required.");
+                        this.displayToaster("Secret name (key) is required.", "warning");
                         return;
                     }
+
+                    const author = localStorage.getItem("ecId") || "Unknown User";
 
                     const payload = {
                         key: this.newSecret.name,
                         value: this.newSecret.value,
-                        created_by: this.newSecret.created_by
+                        created_by: author
                     };
 
                     try {
@@ -208,23 +253,34 @@
 
                         this.fetchSecrets();
                         this.showModal = false;
-
+                        this.displayToaster("Secret created successfully!", "success");
                     } catch (error) {
-                        alert(error.message);
+                        this.displayToaster(error.message, "error");
                     }
                 },
+
                 async deleteSelected() {
-                    for (const id of this.selectedSecrets) {
-                        try {
+                    if (!this.selectedSecrets.length) {
+                        this.displayToaster("No secrets selected for deletion.", "warning");
+                        return;
+                    }
+
+                    try {
+                        for (const id of this.selectedSecrets) {
                             const response = await fetch(`${API_BASE_URL}/delete/${id}`, { method: "DELETE" });
                             if (!response.ok) throw new Error("Failed to delete secret");
-                        } catch (error) {
-                            alert(error.message);
                         }
+
+                        this.fetchSecrets();
+                        this.selectedSecrets = [];
+                        this.displayToaster("Selected secrets deleted successfully.", "success");
+
+                    } catch (error) {
+                        this.displayToaster(error.message, "error");
                     }
-                    this.fetchSecrets();
                 }
             },
+
             mounted() {
                 this.fetchSecrets();
             }
