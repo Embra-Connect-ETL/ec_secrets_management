@@ -17,6 +17,7 @@ services:
       ECS_DATABASE_NAME: ${ECS_DATABASE_NAME}
       ECS_ENCRYPTION_KEY: ${ECS_ENCRYPTION_KEY}
       ECS_AUTHENTICATION_KEY: ${ECS_AUTHENTICATION_KEY}
+      ECS_SIGNING_KEY: ${ECS_SIGNING_KEY}
 
   ec_secrets_management_storage:
     image: mongo:latest

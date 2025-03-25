@@ -21,7 +21,11 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
+    <script src="../js/constants.js"></script>
+
+    <!-- Vue -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="../js/register.js" defer></script>
 
     <link rel="stylesheet" href="../css/auth.css">
     <title>Locksmith | Set Up Account</title>
@@ -44,14 +48,18 @@
             <div id="app" v-cloak>
                 <form @submit.prevent="registerUser">
                     <div class="input-wrapper">
-                        <input type="email" v-model="formData.email" placeholder="user@organization.com" required>
+                        <input type="email" v-model="formData.email" placeholder="user@organization.com" required
+                            autocomplete="email">
                     </div>
 
                     <div class="input-wrapper">
-                        <input type="password" v-model="formData.password" placeholder="Create a password" required>
+                        <input type="password" v-model="formData.password" placeholder="Create a password" required
+                            autocomplete="current-password">
                     </div>
 
-                    <button type="submit" class="registeration-btn form-btn">Register</button>
+                    <button type="submit" class="registeration-btn form-btn" :disabled="isLoading">
+                        {{ isLoading ? 'Registering...' : 'Register' }}
+                    </button>
                 </form>
             </div>
 
@@ -60,73 +68,6 @@
             </p>
         </div>
     </div>
-
-    <script>
-        const API_BASE_URL = "http://localhost:8089";
-        const { createApp, reactive } = Vue;
-
-        createApp({
-            setup() {
-                const formData = reactive({
-                    email: '',
-                    password: ''
-                });
-
-                const displayToaster = (message, backgroundColor = "#ffa07a") => {
-                    Toastify({
-                        text: message,
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        style: {
-                            background: backgroundColor,
-                            color: "#ffffff",
-                            borderRadius: "24px",
-                            fontWeight: "600",
-                            fontSize: "14px",
-                            letterSpacing: "1.4px",
-                            textTransform: "capitalize",
-                            boxShadow: "0 1rem 1rem 0 rgba(0, 0, 0, .05)"
-                        }
-                    }).showToast();
-                };
-
-                const registerUser = async () => {
-                    if (!formData.email || !formData.password) {
-                        displayToaster("Email and password are required!");
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/setup`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ email: formData.email, password: formData.password })
-                        });
-
-                        const data = await response.json();
-                        console.log(data);
-
-                        if (data.status === 200) {
-                            displayToaster("Registration successful!");
-
-                            setTimeout(() => {
-                                window.location.href = "./login.html";
-                            }, 2000);
-                        } else {
-                            displayToaster(data.message || "Registration failed!", "red");
-                        }
-                    } catch (error) {
-                        displayToaster("Something went wrong, please try again", "red");
-                        console.error("Error:", error);
-                    }
-                };
-
-                return { formData, registerUser };
-            }
-        }).mount("#app");
-    </script>
-
 </body>
 
 </html>
