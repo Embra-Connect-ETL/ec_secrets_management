@@ -25,7 +25,6 @@ pub struct UserDocument {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeyPairDocument {
-    pub id: ObjectId,
     pub public_key: String,
     pub private_key: String,
     #[serde(
