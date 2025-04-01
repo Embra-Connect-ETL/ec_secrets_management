@@ -7,6 +7,7 @@ use std::{env, sync::Arc};
 /*-------------
 Custom modules
 ---------------*/
+use crate::repositories::key::KeyRepository;
 use crate::repositories::users::UserRepository;
 use crate::repositories::vault::VaultRepository;
 
@@ -15,8 +16,8 @@ pub fn init() -> AdHoc {
         "Establish connection with Database cluster",
         |rocket| async {
             match connect().await {
-                Ok((user_repository, vault_repository)) => {
-                    rocket.manage(user_repository).manage(vault_repository)
+                Ok((user_repository, vault_repository, key_repository)) => {
+                    rocket.manage(user_repository).manage(vault_repository).manage(key_repository)
                 }
                 Err(error) => {
                     panic!("Cannot connect to instance:: {:?}", error)
@@ -26,7 +27,7 @@ pub fn init() -> AdHoc {
     )
 }
 
-async fn connect() -> mongodb::error::Result<(Arc<UserRepository>, Arc<VaultRepository>)> {
+async fn connect() -> mongodb::error::Result<(Arc<UserRepository>, Arc<VaultRepository>, Arc<KeyRepository>)> {
     dotenv().ok();
 
     let database_url = std::env::var_os("ECS_DATABASE_URL")
@@ -47,11 +48,9 @@ async fn connect() -> mongodb::error::Result<(Arc<UserRepository>, Arc<VaultRepo
 
     let user_repo = Arc::new(UserRepository::new(&client, &database_name, "users"));
 
-    let vault_repo = Arc::new(VaultRepository::new(
-        &client,
-        &database_name,
-        "vault"
-    ));
+    let vault_repo = Arc::new(VaultRepository::new(&client, &database_name, "vault"));
 
-    Ok((user_repo, vault_repo))
+    let keys_repo = Arc::new(KeyRepository::new(&client, &database_name, "keys"));
+
+    Ok((user_repo, vault_repo, keys_repo))
 }
