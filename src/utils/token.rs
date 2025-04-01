@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use base64::{engine::general_purpose, Engine as _};
 use bcrypt::verify;
 use chrono::{Duration, Utc};
 use pasetors::{
@@ -10,21 +11,35 @@ use pasetors::{
 };
 use rocket::State;
 use sha2::{Digest, Sha256};
-use base64::{Engine as _, engine::general_purpose};
 
-use crate::{models::{User, UserCredentials}, repositories::{self, key::KeyRepository}};
+use crate::{
+    models::{User, UserCredentials},
+    repositories::{self, key::KeyRepository},
+};
 
-async fn decode_keys(repo: &State<Arc<KeyRepository>>)->Result<(AsymmetricSecretKey<V4>, AsymmetricPublicKey<V4>), String>{
+async fn decode_keys(
+    repo: &State<Arc<KeyRepository>>,
+) -> Result<(AsymmetricSecretKey<V4>, AsymmetricPublicKey<V4>), String> {
     let kp = repo.get_or_create_key_pair().await?;
-    let private_key_bytes = general_purpose::STANDARD.decode(kp.private_key).map_err(|e|e.to_string())?;
-    let private_key = AsymmetricSecretKey::<V4>::from(&private_key_bytes).map_err(|e|e.to_string())?;
-    let public_key_bytes = general_purpose::STANDARD.decode(kp.public_key).map_err(|e|e.to_string())?;
-    let public_key = AsymmetricPublicKey::<V4>::from(&public_key_bytes).map_err(|e|e.to_string())?;
+    let private_key_bytes = general_purpose::STANDARD
+        .decode(kp.private_key)
+        .map_err(|e| e.to_string())?;
+    let private_key =
+        AsymmetricSecretKey::<V4>::from(&private_key_bytes).map_err(|e| e.to_string())?;
+    let public_key_bytes = general_purpose::STANDARD
+        .decode(kp.public_key)
+        .map_err(|e| e.to_string())?;
+    let public_key =
+        AsymmetricPublicKey::<V4>::from(&public_key_bytes).map_err(|e| e.to_string())?;
     let kp = (private_key, public_key);
     Ok(kp)
 }
 
-pub async fn authorize_user(user: &User, credentials: &UserCredentials, repo: &State<Arc<KeyRepository>>) -> Result<String, String> {
+pub async fn authorize_user(
+    user: &User,
+    credentials: &UserCredentials,
+    repo: &State<Arc<KeyRepository>>,
+) -> Result<String, String> {
     if !verify(&credentials.password, &user.password).map_err(|e| e.to_string())? {
         return Err("Invalid credentials".into());
     }

@@ -10,7 +10,6 @@ use pasetors::{
     version4::V4,
 };
 
-
 pub struct KeyRepository {
     collection: Collection<KeyPairDocument>,
 }
