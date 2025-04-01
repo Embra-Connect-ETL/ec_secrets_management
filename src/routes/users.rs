@@ -3,8 +3,9 @@ Custom modules
 --------------*/
 use crate::models::{DeleteUserResponse, ErrorResponse, LoginResponse, SetupResponse};
 use crate::models::{User, UserCredentials, UserDocument};
+use crate::repositories::key::KeyRepository;
 use crate::repositories::users::UserRepository;
-use crate::utils::hashing::{authorize_user, hash_password};
+use crate::utils::{hashing::hash_password, token::authorize_user};
 
 /*-------------
 3rd party modules
@@ -34,7 +35,7 @@ pub async fn setup(
 
     let hashed_password = match hash_password(credentials.password.clone()) {
         Ok(hash) => hash,
-        Err(_) => {
+        Err(_e) => {
             return Err(Json(ErrorResponse {
                 status: Status::InternalServerError.code,
                 message: "Internal server error".to_string(),
@@ -61,6 +62,7 @@ pub async fn setup(
 #[post("/login", data = "<credentials>")]
 pub async fn login(
     repo: &State<Arc<UserRepository>>,
+    key_repo: &State<Arc<KeyRepository>>,
     credentials: Json<UserCredentials>,
 ) -> Result<Json<LoginResponse>, Json<ErrorResponse>> {
     let user_document = match repo.get_user_by_email(&credentials.email).await {
@@ -86,7 +88,7 @@ pub async fn login(
         created_at: user_document.created_at.to_rfc3339(),
     };
 
-    let token = match authorize_user(&user, &credentials).await {
+    let token = match authorize_user(&user, &credentials, key_repo).await {
         Ok(token) => token,
         Err(_) => {
             return Err(Json(ErrorResponse {

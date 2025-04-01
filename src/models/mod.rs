@@ -1,5 +1,9 @@
 use chrono::{DateTime, Utc};
 use mongodb::bson::oid::ObjectId;
+use pasetors::{
+    keys::{AsymmetricPublicKey, AsymmetricSecretKey},
+    version4::V4,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +16,17 @@ pub struct UserDocument {
     pub id: ObjectId,
     pub email: String,
     pub password: String,
+    #[serde(
+        with = "bson::serde_helpers::chrono_datetime_as_bson_datetime",
+        rename = "createdAt"
+    )]
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KeyPairDocument {
+    pub public_key: String,
+    pub private_key: String,
     #[serde(
         with = "bson::serde_helpers::chrono_datetime_as_bson_datetime",
         rename = "createdAt"
