@@ -81,7 +81,6 @@ pub struct Vault {
 pub struct Secret {
     pub key: String,
     pub value: String,
-    pub created_by: String,
 }
 
 /*----------
