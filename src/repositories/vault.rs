@@ -66,9 +66,9 @@ impl VaultRepository {
     /*---------------
     GET secret by id
     ---------------*/
-    pub async fn get_secret_by_id(&self, id: &str) -> Result<Option<String>> {
+    pub async fn get_secret_by_id(&self, id: &str, subject: &str) -> Result<Option<String>> {
         let object_id = ObjectId::parse_str(id).unwrap();
-        let filter = doc! { "_id": object_id };
+        let filter = doc! { "_id": object_id, "created_by": subject };
 
         if let Some(secret) = self.collection.find_one(filter).await? {
             let encoded_value = BASE64_STANDARD.decode(&secret.value).unwrap();
@@ -102,9 +102,9 @@ impl VaultRepository {
     /*-------------
     DELETE a secret
     ---------------*/
-    pub async fn delete_secret(&self, id: &str) -> Result<Option<String>> {
+    pub async fn delete_secret(&self, id: &str, subject: &str) -> Result<Option<String>> {
         let object_id = ObjectId::parse_str(id).unwrap();
-        let filter = doc! { "_id": object_id };
+        let filter = doc! { "_id": object_id, "created_by": subject };
 
         if let Some(secret) = self.collection.find_one_and_delete(filter).await? {
             let encoded_value = BASE64_STANDARD.decode(&secret.value).unwrap();
@@ -118,8 +118,8 @@ impl VaultRepository {
     /*-------------
     LIST all secrets
     ---------------*/
-    pub async fn list_secrets(&self) -> Result<Vec<VaultDocument>> {
-        let mut cursor = self.collection.find(doc! {}).await?;
+    pub async fn list_secrets(&self, subject: &str) -> Result<Vec<VaultDocument>> {
+        let mut cursor = self.collection.find(doc! {"created_by": subject}).await?;
         let mut secrets = Vec::new();
 
         while let Some(mut secret) = cursor.try_next().await? {

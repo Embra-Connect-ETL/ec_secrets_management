@@ -16,9 +16,10 @@ pub fn init() -> AdHoc {
         "Establish connection with Database cluster",
         |rocket| async {
             match connect().await {
-                Ok((user_repository, vault_repository, key_repository)) => {
-                    rocket.manage(user_repository).manage(vault_repository).manage(key_repository)
-                }
+                Ok((user_repository, vault_repository, key_repository)) => rocket
+                    .manage(user_repository)
+                    .manage(vault_repository)
+                    .manage(key_repository),
                 Err(error) => {
                     panic!("Cannot connect to instance:: {:?}", error)
                 }
@@ -27,7 +28,11 @@ pub fn init() -> AdHoc {
     )
 }
 
-async fn connect() -> mongodb::error::Result<(Arc<UserRepository>, Arc<VaultRepository>, Arc<KeyRepository>)> {
+async fn connect() -> mongodb::error::Result<(
+    Arc<UserRepository>,
+    Arc<VaultRepository>,
+    Arc<KeyRepository>,
+)> {
     dotenv().ok();
 
     let database_url = std::env::var_os("ECS_DATABASE_URL")

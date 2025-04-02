@@ -14,6 +14,7 @@ mod db;
 mod fairings;
 mod models;
 mod repositories;
+mod request_guards;
 mod routes;
 mod utils;
 
