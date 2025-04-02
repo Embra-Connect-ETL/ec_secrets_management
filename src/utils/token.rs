@@ -5,8 +5,8 @@ use bcrypt::verify;
 use chrono::{Duration, Utc};
 use pasetors::{
     claims::Claims,
-    keys::{AsymmetricKeyPair, AsymmetricPublicKey, AsymmetricSecretKey, Generate, SymmetricKey},
-    local, public,
+    keys::{Generate, SymmetricKey},
+    local,
     version4::V4,
 };
 use rocket::State;
