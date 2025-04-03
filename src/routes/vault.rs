@@ -3,7 +3,9 @@ Custom modules
 --------------*/
 use crate::models::*;
 use crate::repositories::vault::VaultRepository;
+use crate::request_guards::TokenGuard;
 
+use jsonwebtoken::TokenData;
 /*-------------
 3rd party modules
 --------------*/
@@ -25,25 +27,40 @@ use std::sync::Arc;
 pub async fn create_secret(
     repo: &State<Arc<VaultRepository>>,
     secret: Json<Secret>,
+    claims: TokenGuard,
 ) -> Result<Json<CreateSecretResponse>, Json<ErrorResponse>> {
-    match repo
-        .create_secret(&secret.key, &secret.value, &secret.created_by)
-        .await
-    {
-        Ok(_) => {
-            info!("Vault entry created successfully.");
-            Ok(Json(CreateSecretResponse {
-                status: Status::Ok.code,
-                message: "Vault entry created successfully".to_string(),
-            }))
-        }
-        Err(e) => {
-            error!("Failed to create vault entry: {:?}", e);
+    if let Some(created_by) = claims.0.get_claim("sub") {
+        if let Some(created_by) = created_by.as_str() {
+            match repo
+                .create_secret(&secret.key, &secret.value, created_by)
+                .await
+            {
+                Ok(_) => {
+                    info!("Vault entry created successfully.");
+                    Ok(Json(CreateSecretResponse {
+                        status: Status::Ok.code,
+                        message: "Vault entry created successfully".to_string(),
+                    }))
+                }
+                Err(e) => {
+                    error!("Failed to create vault entry: {:?}", e);
+                    Err(Json(ErrorResponse {
+                        status: Status::InternalServerError.code,
+                        message: "Failed to create vault entry".to_string(),
+                    }))
+                }
+            }
+        } else {
             Err(Json(ErrorResponse {
-                status: Status::InternalServerError.code,
-                message: "Failed to create vault entry".to_string(),
+                status: Status::Unauthorized.code,
+                message: "Insufficient Permissions".to_string(),
             }))
         }
+    } else {
+        Err(Json(ErrorResponse {
+            status: Status::Unauthorized.code,
+            message: "Insufficient Permissions".to_string(),
+        }))
     }
 }
 
@@ -53,19 +70,34 @@ pub async fn create_secret(
 #[get("/retrieve/vault/entries")]
 pub async fn list_entries(
     repo: &State<Arc<VaultRepository>>,
+    token: TokenGuard,
 ) -> Result<Json<Vec<VaultDocument>>, Json<ErrorResponse>> {
-    match repo.list_secrets().await {
-        Ok(entries) => {
-            info!("Successfully retrieved {} vault entries.", entries.len());
-            Ok(Json(entries)) // Always return an array, even if empty
-        }
-        Err(_) => {
-            error!("Failed to retrieve vault entries.");
+    if let Some(subject) = token.0.get_claim("sub") {
+        if let Some(subject) = subject.as_str() {
+            match repo.list_secrets(subject).await {
+                Ok(entries) => {
+                    info!("Successfully retrieved {} vault entries.", entries.len());
+                    Ok(Json(entries)) // Always return an array, even if empty
+                }
+                Err(_) => {
+                    error!("Failed to retrieve vault entries.");
+                    Err(Json(ErrorResponse {
+                        status: Status::InternalServerError.code,
+                        message: "Failed to retrieve vault entries.".to_string(),
+                    }))
+                }
+            }
+        } else {
             Err(Json(ErrorResponse {
-                status: Status::InternalServerError.code,
-                message: "Failed to retrieve vault entries.".to_string(),
+                status: Status::Unauthorized.code,
+                message: "Insufficient Permissions".to_string(),
             }))
         }
+    } else {
+        Err(Json(ErrorResponse {
+            status: Status::Unauthorized.code,
+            message: "Insufficient Permissions".to_string(),
+        }))
     }
 }
 
@@ -76,6 +108,7 @@ pub async fn list_entries(
 pub async fn get_entry(
     repo: &State<Arc<VaultRepository>>,
     id: &str,
+    token: TokenGuard,
 ) -> Result<Json<String>, Json<ErrorResponse>> {
     if id.trim().is_empty() {
         error!("Invalid request: Provided ID is empty.");
@@ -84,29 +117,42 @@ pub async fn get_entry(
             message: "Invalid ID provided.".to_string(),
         }));
     }
-
-    match repo.get_secret_by_id(&id).await {
-        Ok(Some(entry)) => {
-            info!("Successfully retrieved vault entry with ID: {}", id);
-            Ok(Json(entry))
-        }
-        Ok(None) => {
-            error!("Vault entry not found with ID: {}", id);
+    if let Some(subject) = token.0.get_claim("sub") {
+        if let Some(subject) = subject.as_str() {
+            match repo.get_secret_by_id(&id, subject).await {
+                Ok(Some(entry)) => {
+                    info!("Successfully retrieved vault entry with ID: {}", id);
+                    Ok(Json(entry))
+                }
+                Ok(None) => {
+                    error!("Vault entry not found with ID: {}", id);
+                    Err(Json(ErrorResponse {
+                        status: Status::NotFound.code,
+                        message: "Vault entry not found.".to_string(),
+                    }))
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to retrieve vault entry by ID: {}. Error: {:?}",
+                        id, e
+                    );
+                    Err(Json(ErrorResponse {
+                        status: Status::InternalServerError.code,
+                        message: "Failed to retrieve vault entry.".to_string(),
+                    }))
+                }
+            }
+        } else {
             Err(Json(ErrorResponse {
-                status: Status::NotFound.code,
-                message: "Vault entry not found.".to_string(),
+                status: Status::Unauthorized.code,
+                message: "Insufficient Permissions".to_string(),
             }))
         }
-        Err(e) => {
-            error!(
-                "Failed to retrieve vault entry by ID: {}. Error: {:?}",
-                id, e
-            );
-            Err(Json(ErrorResponse {
-                status: Status::InternalServerError.code,
-                message: "Failed to retrieve vault entry.".to_string(),
-            }))
-        }
+    } else {
+        Err(Json(ErrorResponse {
+            status: Status::Unauthorized.code,
+            message: "Insufficient Permissions".to_string(),
+        }))
     }
 }
 
@@ -162,6 +208,7 @@ pub async fn get_entry_by_author(
 pub async fn delete_entry(
     repo: &State<Arc<VaultRepository>>,
     id: &str,
+    token: TokenGuard,
 ) -> Result<Json<DeleteSecretResponse>, Json<ErrorResponse>> {
     if id.trim().is_empty() || id.contains(char::is_whitespace) {
         error!("Invalid request: Provided ID '{}' is invalid.", id);
@@ -171,31 +218,45 @@ pub async fn delete_entry(
         }));
     }
 
-    match repo.delete_secret(&id).await {
-        Ok(Some(_)) => {
-            info!("Successfully deleted vault entry with ID: {}", id);
-            Ok(Json(DeleteSecretResponse {
-                status: Status::Ok.code,
-                message: "Vault entry deleted successfully.".to_string(),
-            }))
-        }
-        Ok(None) => {
-            error!("Vault entry not found for deletion with ID: {}", id);
+    if let Some(subject) = token.0.get_claim("sub") {
+        if let Some(subject) = subject.as_str() {
+            match repo.delete_secret(&id, subject).await {
+                Ok(Some(_)) => {
+                    info!("Successfully deleted vault entry with ID: {}", id);
+                    Ok(Json(DeleteSecretResponse {
+                        status: Status::Ok.code,
+                        message: "Vault entry deleted successfully.".to_string(),
+                    }))
+                }
+                Ok(None) => {
+                    error!("Vault entry not found for deletion with ID: {}", id);
+                    Err(Json(ErrorResponse {
+                        status: Status::NotFound.code,
+                        message: "Vault entry not found.".to_string(),
+                    }))
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to delete vault entry with ID: {}. Error: {:?}",
+                        id, e
+                    );
+                    Err(Json(ErrorResponse {
+                        status: Status::InternalServerError.code,
+                        message: "Failed to delete vault entry.".to_string(),
+                    }))
+                }
+            }
+        } else {
             Err(Json(ErrorResponse {
-                status: Status::NotFound.code,
-                message: "Vault entry not found.".to_string(),
+                status: Status::Unauthorized.code,
+                message: "Insufficient Permissions".to_string(),
             }))
         }
-        Err(e) => {
-            error!(
-                "Failed to delete vault entry with ID: {}. Error: {:?}",
-                id, e
-            );
-            Err(Json(ErrorResponse {
-                status: Status::InternalServerError.code,
-                message: "Failed to delete vault entry.".to_string(),
-            }))
-        }
+    } else {
+        Err(Json(ErrorResponse {
+            status: Status::Unauthorized.code,
+            message: "Insufficient Permissions".to_string(),
+        }))
     }
 }
 

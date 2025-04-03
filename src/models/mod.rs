@@ -25,7 +25,6 @@ pub struct UserDocument {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeyPairDocument {
-    pub public_key: String,
     pub private_key: String,
     #[serde(
         with = "bson::serde_helpers::chrono_datetime_as_bson_datetime",
@@ -82,7 +81,6 @@ pub struct Vault {
 pub struct Secret {
     pub key: String,
     pub value: String,
-    pub created_by: String,
 }
 
 /*----------

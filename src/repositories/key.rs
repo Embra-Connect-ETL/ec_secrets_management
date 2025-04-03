@@ -6,7 +6,7 @@ use chrono::{Duration, Utc};
 use futures::{StreamExt, TryStreamExt};
 use mongodb::{Client, Collection};
 use pasetors::{
-    keys::{AsymmetricKeyPair, Generate},
+    keys::{AsymmetricKeyPair, Generate, SymmetricKey},
     version4::V4,
 };
 
@@ -23,21 +23,19 @@ impl KeyRepository {
     }
 
     pub async fn get_or_create_key_pair(&self) -> Result<KeyPairDocument, String> {
-        let kp = AsymmetricKeyPair::<V4>::generate().map_err(|e| e.to_string())?;
-        let public_key = general_purpose::STANDARD.encode(kp.public.as_bytes());
-        let private_key = general_purpose::STANDARD.encode(kp.secret.as_bytes());
+        let kp = SymmetricKey::<V4>::generate().map_err(|e| e.to_string())?;
+        let private_key = general_purpose::STANDARD.encode(kp.as_bytes());
         let key_pair = KeyPairDocument {
-            public_key,
             private_key,
             created_at: Utc::now(),
         };
         let valid_age = Utc::now() - Duration::days(1);
         let mut cursor = self
             .collection
-            .find(doc! { "created_at": {"$lt": DateTime::from(valid_age)} })
+            .find_one(doc! {})
             .await
             .map_err(|e| e.to_string())?;
-        if let Some(doc) = cursor.try_next().await.map_err(|e| e.to_string())? {
+        if let Some(doc) = cursor {
             return Ok(doc);
         } else {
             self.collection

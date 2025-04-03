@@ -5,8 +5,8 @@ use bcrypt::verify;
 use chrono::{Duration, Utc};
 use pasetors::{
     claims::Claims,
-    keys::{AsymmetricKeyPair, AsymmetricPublicKey, AsymmetricSecretKey, Generate},
-    public,
+    keys::{Generate, SymmetricKey},
+    local,
     version4::V4,
 };
 use rocket::State;
@@ -17,22 +17,13 @@ use crate::{
     repositories::{self, key::KeyRepository},
 };
 
-async fn decode_keys(
-    repo: &State<Arc<KeyRepository>>,
-) -> Result<(AsymmetricSecretKey<V4>, AsymmetricPublicKey<V4>), String> {
+pub async fn decode_keys(repo: &State<Arc<KeyRepository>>) -> Result<SymmetricKey<V4>, String> {
     let kp = repo.get_or_create_key_pair().await?;
     let private_key_bytes = general_purpose::STANDARD
         .decode(kp.private_key)
         .map_err(|e| e.to_string())?;
-    let private_key =
-        AsymmetricSecretKey::<V4>::from(&private_key_bytes).map_err(|e| e.to_string())?;
-    let public_key_bytes = general_purpose::STANDARD
-        .decode(kp.public_key)
-        .map_err(|e| e.to_string())?;
-    let public_key =
-        AsymmetricPublicKey::<V4>::from(&public_key_bytes).map_err(|e| e.to_string())?;
-    let kp = (private_key, public_key);
-    Ok(kp)
+    let private_key = SymmetricKey::<V4>::from(&private_key_bytes).map_err(|e| e.to_string())?;
+    Ok(private_key)
 }
 
 pub async fn authorize_user(
@@ -64,6 +55,6 @@ pub async fn authorize_user(
     claims.add_additional("nonce", nonce);
     claims.add_additional("aud", vec!["https://www.embraconnect.com".to_string()]);
     let kp = decode_keys(repo).await?;
-    let token = public::sign(&kp.0, &claims, None, None).map_err(|e| e.to_string())?;
+    let token = local::encrypt(&kp, &claims, None, None).map_err(|e| e.to_string())?;
     Ok(token)
 }
