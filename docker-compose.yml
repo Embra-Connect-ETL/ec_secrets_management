@@ -19,8 +19,9 @@ services:
       ECS_AUTHENTICATION_KEY: ${ECS_AUTHENTICATION_KEY}
       ECS_SIGNING_KEY: ${ECS_SIGNING_KEY}
 
-  ec_secrets_management_storage:
+  mongo-db:
     image: mongo:latest
+    container_name: ec_data_store
     restart: unless-stopped
     ports:
       - "27017:27017"
