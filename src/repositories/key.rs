@@ -10,6 +10,14 @@ use pasetors::{
     version4::V4,
 };
 
+/*---------------------------------------------------------------------------
+    The KeyRepository provides a basic secrets management mechanism that
+    generates and stores cryptographically secure symmetric keys for
+    authentication or encryption purposes.
+
+    Note: While this struct is called KeyPairDocument,
+    it currently only stores a symmetric key.
+---------------------------------------------------------------------------*/
 pub struct KeyRepository {
     collection: Collection<KeyPairDocument>,
 }
