@@ -33,20 +33,16 @@ impl KeyRepository {
     pub async fn get_or_create_key_pair(&self) -> Result<KeyPairDocument, String> {
         let kp = SymmetricKey::<V4>::generate().map_err(|e| e.to_string())?;
         let private_key = general_purpose::STANDARD.encode(kp.as_bytes());
-
         let key_pair = KeyPairDocument {
             private_key,
             created_at: Utc::now(),
         };
-
         let valid_age = Utc::now() - Duration::days(1);
-
         let mut cursor = self
             .collection
             .find_one(doc! {})
             .await
             .map_err(|e| e.to_string())?;
-
         if let Some(doc) = cursor {
             return Ok(doc);
         } else {
@@ -55,7 +51,6 @@ impl KeyRepository {
                 .await
                 .map_err(|e| e.to_string())?;
         }
-
         Ok(key_pair)
     }
 }
