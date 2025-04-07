@@ -27,6 +27,11 @@ fn health_check() -> Json<String> {
     Json(String::from("Secrets management service is running..."))
 }
 
+#[rocket::options("/<_..>")]
+fn _options() -> &'static str {
+    ""
+}
+
 #[launch]
 fn rocket() -> _ {
     dotenvy::dotenv().ok();
@@ -37,7 +42,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(db::init())
         .attach(fairings::CORS)
-        .mount("/", routes![health_check])
+        .mount("/", routes![health_check, _options])
         .mount("/", user_routes())
         .mount("/", vault_routes())
         .mount("/", FileServer::from(public_path))

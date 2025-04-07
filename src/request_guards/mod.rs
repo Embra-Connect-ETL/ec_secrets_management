@@ -1,16 +1,16 @@
 use crate::utils::token::decode_keys;
 use pasetors::{
     claims::{Claims, ClaimsValidationRules},
-    local, public,
+    local,
     token::UntrustedToken,
     version4::V4,
-    Local, Public,
+    Local,
 };
 use rocket::async_trait;
 use rocket::{
     http::Status,
     request::{FromRequest, Outcome},
-    Error, Request, State,
+    Request, State,
 };
 use std::sync::Arc;
 

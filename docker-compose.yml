@@ -1,13 +1,11 @@
-version: "3.3"
-
 services:
   ec_secrets_management:
     build: .
     restart: unless-stopped
     depends_on:
-      - ec_secrets_management_storage
+      - mongo-db
     links:
-      - "ec_secrets_management_storage"
+      - "mongo-db"
     ports:
       - "8089:8089"
     networks:

@@ -1,9 +1,6 @@
 use chrono::{DateTime, Utc};
 use mongodb::bson::oid::ObjectId;
-use pasetors::{
-    keys::{AsymmetricPublicKey, AsymmetricSecretKey},
-    version4::V4,
-};
+use rocket::response::Responder;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

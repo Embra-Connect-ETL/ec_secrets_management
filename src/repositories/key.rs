@@ -1,12 +1,11 @@
 use crate::models::KeyPairDocument;
 
 use base64::{engine::general_purpose, Engine as _};
-use bson::{doc, from_document, oid::ObjectId, DateTime};
+use bson::doc;
 use chrono::{Duration, Utc};
-use futures::{StreamExt, TryStreamExt};
 use mongodb::{Client, Collection};
 use pasetors::{
-    keys::{AsymmetricKeyPair, Generate, SymmetricKey},
+    keys::{Generate, SymmetricKey},
     version4::V4,
 };
 

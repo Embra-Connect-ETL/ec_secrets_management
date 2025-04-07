@@ -3,6 +3,13 @@ name = "ec_secrets_management"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ec_secrets_management"
+path = "src/main.rs"
+
 [dependencies]
 aes-gcm = "0.10.3"
 base64 = "0.22.1"
@@ -33,5 +40,3 @@ anyhow = "1.0.97"
 jsonwebtoken = "9.3.1"
 bcrypt = "0.17.0"
 pasetors = "0.7.2"
-
-
