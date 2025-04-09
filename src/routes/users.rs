@@ -65,9 +65,7 @@ pub async fn login(
     credentials: Json<UserCredentials>,
 ) -> Result<Json<LoginResponse>, Json<ErrorResponse>> {
     let user_document = match repo.get_user_by_email(&credentials.email).await {
-        Ok(Some(user_document)) => {
-            user_document
-        },
+        Ok(Some(user_document)) => user_document,
         Ok(None) => {
             return Err(Json(ErrorResponse {
                 status: Status::Unauthorized.code,
@@ -94,8 +92,7 @@ pub async fn login(
             println!("{token}");
             token
         },
-        Err(e) => {
-            println!("Token error: {e}");
+        Err(_) => {
             return Err(Json(ErrorResponse {
                 status: Status::Unauthorized.code,
                 message: "Invalid email or password".to_string(),
