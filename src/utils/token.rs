@@ -1,31 +1,35 @@
 use std::sync::Arc;
 
-use base64::{engine::general_purpose, Engine as _};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use bcrypt::verify;
 use chrono::{Duration, Utc};
 use pasetors::{
-    claims::Claims,
-    keys::{Generate, SymmetricKey},
-    local,
-    version4::V4,
+    claims::Claims, keys::{AsymmetricPublicKey, AsymmetricSecretKey}, public, version4::V4
 };
 use rocket::State;
 use sha2::{Digest, Sha256};
 
 use crate::{
     models::{User, UserCredentials},
-    repositories::{self, key::KeyRepository},
+    repositories::key::KeyRepository,
 };
 
-pub async fn decode_keys(repo: &State<Arc<KeyRepository>>) -> Result<SymmetricKey<V4>, String> {
-    let kp = repo.get_or_create_key_pair().await?;
-    let private_key_bytes = general_purpose::STANDARD
-        .decode(kp.private_key)
-        .map_err(|e| e.to_string())?;
-    let private_key = SymmetricKey::<V4>::from(&private_key_bytes).map_err(|e| e.to_string())?;
-    Ok(private_key)
+
+
+pub async fn decode_keys(repo: &State<Arc<KeyRepository>>) -> Result<(AsymmetricSecretKey<V4>, AsymmetricPublicKey<V4>), String> {
+    let kp = repo.get_or_create_key_pair().await.map_err(|e|e.to_string())?;
+    let decoded_private_key  = STANDARD.decode(kp.private_key).map_err(|e|e.to_string())?;
+    let decoded_private_key = &decoded_private_key.as_slice();
+    let private_key = AsymmetricSecretKey::<V4>::from(decoded_private_key).map_err(|e|e.to_string())?;
+    let decoded_public_key = STANDARD.decode(kp.public_key).map_err(|e|e.to_string())?;
+    let decoded_public_key = &decoded_public_key.as_slice();
+    let public_key = AsymmetricPublicKey::<V4>::from(decoded_public_key).map_err(|e|e.to_string())?;
+    Ok((private_key, public_key))
 }
 
+/*---------------------------------------------
+Authorize the user via password verification.
+----------------------------------------------*/
 pub async fn authorize_user(
     user: &User,
     credentials: &UserCredentials,
@@ -40,21 +44,19 @@ pub async fn authorize_user(
         .into_string()
         .unwrap();
 
-    let expiration = Utc::now()
-        .checked_add_signed(Duration::minutes(480)) // Moderate expiry (8 hrs)
-        .expect("valid timestamp")
-        .timestamp() as usize;
-
+    let expiration = Utc::now() + Duration::hours(8);
+    let expiration = expiration.to_rfc3339();
+    
     let mut hasher = Sha256::new();
     hasher.update(format!("{}{}", user.email, ecs_authentication_key)); // Unique to current system
     let nonce = format!("{:x}", hasher.finalize());
-
-    claims.subject(&credentials.email);
-    claims.expiration(&expiration.to_string());
-    claims.issuer("https://www.embraconnect.com");
-    claims.add_additional("nonce", nonce);
-    claims.add_additional("aud", vec!["https://www.embraconnect.com".to_string()]);
-    let kp = decode_keys(repo).await?;
-    let token = local::encrypt(&kp, &claims, None, None).map_err(|e| e.to_string())?;
+    
+    claims.subject(&credentials.email).map_err(|e|e.to_string())?;
+    claims.expiration(&expiration).map_err(|e|e.to_string())?;
+    claims.issuer("https://www.embraconnect.com").map_err(|e|e.to_string())?;
+    claims.add_additional("nonce", nonce).map_err(|e|e.to_string())?;
+    // claims.add_additional("aud", vec!["https://www.embraconnect.com"]).map_err(|e|e.to_string())?;
+    let (private_key, _public_key) = decode_keys(repo).await.map_err(|e|e.to_string())?;
+    let token = public::sign(&private_key, &claims, None, None).map_err(|e|e.to_string())?;
     Ok(token)
 }

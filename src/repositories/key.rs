@@ -2,10 +2,10 @@ use crate::models::KeyPairDocument;
 
 use base64::{engine::general_purpose, Engine as _};
 use bson::doc;
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use mongodb::{Client, Collection};
 use pasetors::{
-    keys::{Generate, SymmetricKey},
+    keys::{AsymmetricKeyPair, Generate},
     version4::V4,
 };
 
@@ -30,14 +30,15 @@ impl KeyRepository {
     }
 
     pub async fn get_or_create_key_pair(&self) -> Result<KeyPairDocument, String> {
-        let kp = SymmetricKey::<V4>::generate().map_err(|e| e.to_string())?;
-        let private_key = general_purpose::STANDARD.encode(kp.as_bytes());
+        let kp = AsymmetricKeyPair::<V4>::generate().map_err(|e| e.to_string())?;
+        let private_key = general_purpose::STANDARD.encode(kp.secret.as_bytes());
+        let public_key = general_purpose::STANDARD.encode(kp.public.as_bytes());
         let key_pair = KeyPairDocument {
             private_key,
+            public_key,
             created_at: Utc::now(),
         };
-        let valid_age = Utc::now() - Duration::days(1);
-        let mut cursor = self
+        let cursor = self
             .collection
             .find_one(doc! {})
             .await

@@ -11,8 +11,7 @@ use crate::utils::{hashing::hash_password, token::authorize_user};
 3rd party modules
 --------------*/
 use rocket::http::Status;
-use rocket::response::status::Custom;
-use rocket::serde::{json::Json, Deserialize};
+use rocket::serde::json::Json;
 use rocket::{delete, get, post, put, routes, State};
 
 /*-------------
@@ -43,7 +42,7 @@ pub async fn setup(
         }
     };
 
-    let user = match repo.create_user(&credentials.email, &hashed_password).await {
+    let _ = match repo.create_user(&credentials.email, &hashed_password).await {
         Ok(user) => user,
         Err(_) => {
             return Err(Json(ErrorResponse {
@@ -66,7 +65,9 @@ pub async fn login(
     credentials: Json<UserCredentials>,
 ) -> Result<Json<LoginResponse>, Json<ErrorResponse>> {
     let user_document = match repo.get_user_by_email(&credentials.email).await {
-        Ok(Some(user_document)) => user_document,
+        Ok(Some(user_document)) => {
+            user_document
+        },
         Ok(None) => {
             return Err(Json(ErrorResponse {
                 status: Status::Unauthorized.code,
@@ -89,8 +90,12 @@ pub async fn login(
     };
 
     let token = match authorize_user(&user, &credentials, key_repo).await {
-        Ok(token) => token,
-        Err(_) => {
+        Ok(token) => {
+            println!("{token}");
+            token
+        },
+        Err(e) => {
+            println!("Token error: {e}");
             return Err(Json(ErrorResponse {
                 status: Status::Unauthorized.code,
                 message: "Invalid email or password".to_string(),
