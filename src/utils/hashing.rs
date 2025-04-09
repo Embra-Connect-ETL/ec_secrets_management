@@ -33,9 +33,7 @@ struct Claims {
     iss: String,      // Issuer restriction
 }
 
-/*---------------------------------------------
-Authorize the user via password verification.
-----------------------------------------------*/
+
 pub async fn authorize_user(user: &User, credentials: &UserCredentials) -> Result<String, String> {
     let ecs_authentication_key = std::env::var_os("ECS_AUTHENTICATION_KEY")
         .expect("[ECS_AUTHENTICATION_KEY] must be set...")

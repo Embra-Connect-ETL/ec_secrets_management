@@ -23,6 +23,7 @@ pub struct UserDocument {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeyPairDocument {
     pub private_key: String,
+    pub public_key: String,
     #[serde(
         with = "bson::serde_helpers::chrono_datetime_as_bson_datetime",
         rename = "createdAt"

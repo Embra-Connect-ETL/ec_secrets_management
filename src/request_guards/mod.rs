@@ -1,10 +1,6 @@
 use crate::utils::token::decode_keys;
 use pasetors::{
-    claims::{Claims, ClaimsValidationRules},
-    local,
-    token::UntrustedToken,
-    version4::V4,
-    Local,
+    claims::{Claims, ClaimsValidationRules}, public, token::UntrustedToken, version4::V4, Public
 };
 use rocket::async_trait;
 use rocket::{
@@ -34,10 +30,10 @@ impl<'r> FromRequest<'r> for TokenGuard {
             Some(token) if token.starts_with("Bearer ") => {
                 let token = token.trim_start_matches("Bearer ").trim();
                 let validation_rules = ClaimsValidationRules::new();
-                if let Ok(untrusted_token) = UntrustedToken::<Local, V4>::try_from(token) {
+                if let Ok(untrusted_token) = UntrustedToken::<Public, V4>::try_from(token) {
                     if let Ok(kp) = decode_keys(key_repo).await {
                         if let Ok(trusted_token) =
-                            local::decrypt(&kp, &untrusted_token, &validation_rules, None, None)
+                            public::verify(&kp.1, &untrusted_token, &validation_rules, None, None)
                         {
                             if let Some(claims) = trusted_token.payload_claims() {
                                 Outcome::Success(TokenGuard(claims.clone()))

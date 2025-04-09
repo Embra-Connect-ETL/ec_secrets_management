@@ -5,15 +5,13 @@ use crate::models::*;
 use crate::repositories::vault::VaultRepository;
 use crate::request_guards::TokenGuard;
 
-use jsonwebtoken::TokenData;
 /*-------------
 3rd party modules
 --------------*/
-use log::{debug, error, info, warn};
+use log::{error, info};
 use rocket::http::Status;
-use rocket::response::status::Custom;
-use rocket::serde::{json::Json, Deserialize};
-use rocket::{delete, get, post, put, routes, State};
+use rocket::serde::json::Json;
+use rocket::{delete, get, post, routes, State};
 
 /*-------------
 stdlib modules
